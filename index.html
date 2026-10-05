@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Share - Find Who Chose the Same Word</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            margin: 0;
+            padding: 30px 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #ffcc00; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #aaa; margin-bottom: 30px; }
+
+        .card {
+            background: rgba(22, 33, 62, 0.85);
+            padding: 25px 30px;
+            border-radius: 12px;
+            border: 1px solid #2a3a5c;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #ff6b6b;
+            margin-top: 0;
+            border-bottom: 2px solid #2a3a5c;
+            padding-bottom: 8px;
+            font-size: 1.15em;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #ccc;
+            font-size: 0.9em;
+        }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            border: 1px solid #2a3a5c;
+            background: #0f1626;
+            color: #eee;
+            font-size: 1em;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        button {
+            background: #2ecc71;
+            color: #fff;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            padding: 11px 22px;
+            border-radius: 6px;
+            font-size: 1em;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        button:hover { background: #27ae60; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        button.secondary { background: #3a4a6c; }
+        button.secondary:hover { background: #4a5a7c; }
+
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .btn-row button { margin: 0; }
+
+        .status {
+            background: #0f1626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: Consolas, monospace;
+            color: #2ecc71;
+            min-height: 20px;
+            font-size: 0.9em;
+            word-break: break-word;
+        }
+        .status.error { color: #ff6b6b; }
+        .status.ok { color: #2ecc71; }
+
+        .user-box {
+            background: #0f1626;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            color: #ffcc00;
+        }
+
+        .word-display {
+            background: #0f1626;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.3em;
+            font-family: Consolas, monospace;
+            color: #2ecc71;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 30px;
+            border: 1px dashed #2ecc71;
+        }
+
+        .results-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .results-list li {
+            background: #0f1626;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+            border-left: 3px solid #2ecc71;
+        }
+        .results-list li.you {
+            border-left-color: #ffcc00;
+            color: #ffcc00;
+        }
+
+        .results-count {
+            font-size: 1.1em;
+            color: #ffcc00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .hidden { display: none; }
+        .info-small { font-size: 0.8em; color: #888; margin-top: 8px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Word Share</h1>
+        <p class="subtitle">Register, choose a word, find who chose the same</p>
+
+        <div class="card" id="authCard">
+            <h2>Account</h2>
+
+            <div id="loggedOutView">
+                <label for="email">Email (any format works)</label>
+                <input type="email" id="email" placeholder="you@example.com" autocomplete="username">
+
+                <label for="password">Password (any, at least 6 characters)</label>
+                <input type="password" id="password" placeholder="password" autocomplete="current-password">
+
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Your display name">
+
+                <div class="btn-row">
+                    <button id="registerBtn">Register</button>
+                    <button id="loginBtn" class="secondary">Login</button>
+                </div>
+                <div class="status" id="authStatus"></div>
+                <div class="info-small">
+                    You can create unlimited accounts. Use any email format (e.g. test1@test.com).
+                </div>
+            </div>
+
+            <div id="loggedInView" class="hidden">
+                <div class="user-box" id="userBox">-</div>
+                <div class="btn-row">
+                    <button id="logoutBtn" class="secondary">Log out</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card hidden" id="wordCard">
+            <h2>Your Word</h2>
+
+            <div class="word-display" id="currentWord">No word chosen yet.</div>
+
+            <label for="wordInput">Choose your word</label>
+            <input type="text" id="wordInput" placeholder="type any word...">
+
+            <div class="btn-row">
+                <button id="saveWordBtn">Save Word</button>
+            </div>
+            <div class="status" id="wordStatus"></div>
+        </div>
+
+        <div class="card hidden" id="searchCard">
+            <h2>Search Word</h2>
+
+            <label for="searchInput">Find who chose this word</label>
+            <input type="text" id="searchInput" placeholder="type a word...">
+
+            <div class="btn-row">
+                <button id="searchBtn">Search</button>
+            </div>
+            <div class="status" id="searchStatus"></div>
+
+            <div id="searchResultsWrap" class="hidden">
+                <div class="results-count" id="resultsCount"></div>
+                <ul class="results-list" id="resultsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import {
+        getAuth,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged
+    } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import {
+        getFirestore,
+        doc,
+        setDoc,
+        getDoc,
+        getDocs,
+        collection,
+        query,
+        where
+    } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDWHZaTdWww4pgXiMNtSIEPzk8xjyOLfOw",
+        authDomain: "randomcoolwords.firebaseapp.com",
+        projectId: "randomcoolwords",
+        storageBucket: "randomcoolwords.firebasestorage.app",
+        messagingSenderId: "516982473387",
+        appId: "1:516982473387:web:1cc0cb82b3479408dcadee",
+        measurementId: "G-XDCJVSBK5K"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loggedOutView = document.getElementById('loggedOutView');
+    const loggedInView = document.getElementById('loggedInView');
+    const userBox = document.getElementById('userBox');
+    const authStatus = document.getElementById('authStatus');
+    const wordStatus = document.getElementById('wordStatus');
+    const searchStatus = document.getElementById('searchStatus');
+    const currentWordEl = document.getElementById('currentWord');
+    const wordInput = document.getElementById('wordInput');
+    const searchInput = document.getElementById('searchInput');
+    const searchResultsWrap = document.getElementById('searchResultsWrap');
+    const resultsCount = document.getElementById('resultsCount');
+    const resultsList = document.getElementById('resultsList');
+    const wordCard = document.getElementById('wordCard');
+    const searchCard = document.getElementById('searchCard');
+
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const usernameInput = document.getElementById('username');
+
+    let currentUser = null;
+    let currentUsername = '';
+
+    function setStatus(el, msg, type) {
+        el.textContent = msg || '';
+        el.classList.remove('error', 'ok');
+        if (type) el.classList.add(type);
+    }
+
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const username = usernameInput.value.trim();
+
+        if (!email || !password || !username) {
+            setStatus(authStatus, 'Fill email, password and username.', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            setStatus(authStatus, 'Password must be at least 6 characters.', 'error');
+            return;
+        }
+
+        try {
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            await setDoc(doc(db, 'users', cred.user.uid), { username });
+            setStatus(authStatus, 'Registered as ' + username, 'ok');
+            emailInput.value = '';
+            passwordInput.value = '';
+            usernameInput.value = '';
+        } catch (err) {
+            setStatus(authStatus, 'Error: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            setStatus(authStatus, 'Enter email and password.', 'error');
+            return;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            setStatus(authStatus, 'Logged in.', 'ok');
+            passwordInput.value = '';
+        } catch (err) {
+            setStatus(authStatus, 'Error: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await signOut(auth);
+        setStatus(authStatus, 'Logged out.', 'ok');
+    });
+
+    document.getElementById('saveWordBtn').addEventListener('click', async () => {
+        if (!currentUser) return;
+        const word = wordInput.value.trim().toLowerCase();
+        if (!word) {
+            setStatus(wordStatus, 'Type a word first.', 'error');
+            return;
+        }
+
+        try {
+            await setDoc(doc(db, 'user_words', currentUser.uid), {
+                username: currentUsername,
+                word: word
+            });
+            currentWordEl.textContent = word;
+            wordInput.value = '';
+            setStatus(wordStatus, 'Saved!', 'ok');
+        } catch (err) {
+            setStatus(wordStatus, 'Error: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+        const term = searchInput.value.trim().toLowerCase();
+        if (!term) {
+            setStatus(searchStatus, 'Type a word to search.', 'error');
+            return;
+        }
+
+        setStatus(searchStatus, 'Searching...');
+        searchResultsWrap.classList.add('hidden');
+
+        try {
+            const q = query(collection(db, 'user_words'), where('word', '==', term));
+            const snapshot = await getDocs(q);
+
+            const users = [];
+            snapshot.forEach(d => {
+                users.push({
+                    username: d.data().username,
+                    uid: d.id
+                });
+            });
+
+            const total = users.length;
+
+            if (total === 0) {
+                setStatus(searchStatus, 'No one chose "' + term + '" yet.', 'ok');
+                return;
+            }
+
+            setStatus(searchStatus, 'Found ' + total + ' user(s).', 'ok');
+            resultsCount.textContent = 'Total: ' + total + ' player(s) chose "' + term + '"';
+
+            resultsList.innerHTML = '';
+            users.forEach(u => {
+                const li = document.createElement('li');
+                li.textContent = u.username;
+                if (currentUser && u.uid === currentUser.uid) {
+                    li.classList.add('you');
+                    li.textContent += ' (you)';
+                }
+                resultsList.appendChild(li);
+            });
+
+            searchResultsWrap.classList.remove('hidden');
+        } catch (err) {
+            setStatus(searchStatus, 'Error: ' + err.message, 'error');
+        }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            try {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                currentUsername = snap.exists() ? snap.data().username : user.email;
+            } catch (e) {
+                currentUsername = user.email;
+            }
+            userBox.textContent = 'Logged in as: ' + currentUsername + ' (' + user.email + ')';
+            loggedOutView.classList.add('hidden');
+            loggedInView.classList.remove('hidden');
+            wordCard.classList.remove('hidden');
+            searchCard.classList.remove('hidden');
+
+            try {
+                const wsnap = await getDoc(doc(db, 'user_words', user.uid));
+                if (wsnap.exists()) {
+                    currentWordEl.textContent = wsnap.data().word;
+                } else {
+                    currentWordEl.textContent = 'No word chosen yet.';
+                }
+            } catch (e) {
+                currentWordEl.textContent = '-';
+            }
+        } else {
+            currentUser = null;
+            currentUsername = '';
+            loggedOutView.classList.remove('hidden');
+            loggedInView.classList.add('hidden');
+            wordCard.classList.add('hidden');
+            searchCard.classList.add('hidden');
+            searchResultsWrap.classList.add('hidden');
+        }
+    });
+    </script>
+</body>
+</html>
